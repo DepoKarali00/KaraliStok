@@ -5,6 +5,27 @@
 // Kurulum için README.md → "Firebase Kurulumu" bölümüne bak.
 // =========================================================
 
+// Firebase düzgün kurulmadıysa (config doldurulmamış, SDK yüklenememiş vb.)
+// çökmek yerine ekranda anlaşılır bir uyarı göster.
+if(window.firebaseSetupError){
+  document.addEventListener('DOMContentLoaded', showSetupError);
+  if(document.readyState !== 'loading') showSetupError();
+}
+
+function showSetupError(){
+  const overlay = document.getElementById('authOverlay');
+  const modal = overlay.querySelector('.auth-modal');
+  modal.innerHTML = `
+    <div class="auth-logo"><img src="icons/icon-192.png" alt="Karali Depo"></div>
+    <h2>Kurulum tamamlanmadı</h2>
+    <p class="auth-subtitle" style="margin-bottom:0;">${escapeHtml(window.firebaseSetupError)}</p>
+  `;
+  overlay.hidden = false;
+}
+
+const auth = window.auth;
+const db = window.db;
+
 let products = [];
 let unsubscribeProducts = null;
 
@@ -62,6 +83,13 @@ function updateAuthUI(){
 authForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   authError.hidden = true;
+
+  if(!auth){
+    authError.textContent = window.firebaseSetupError || 'Firebase kurulumu tamamlanmadı — README.md dosyasındaki adımları uygula.';
+    authError.hidden = false;
+    return;
+  }
+
   const email = authEmail.value.trim();
   const password = authPassword.value;
   authSubmitBtn.disabled = true;
@@ -91,24 +119,28 @@ function translateAuthError(err){
     'auth/email-already-in-use': 'Bu e-posta zaten kayıtlı — giriş yapmayı dene.',
     'auth/weak-password': 'Şifre en az 6 karakter olmalı.',
     'auth/network-request-failed': 'Bağlantı hatası — internetini kontrol et.',
+    'auth/invalid-api-key': 'Firebase API anahtarı geçersiz — firebase-config.js içindeki bilgileri Firebase Console\'daki değerlerle karşılaştır.',
     'auth/configuration-not-found': 'Firebase yapılandırması eksik — firebase-config.js dosyasını doldurduğundan emin ol ve Firebase Console\'da E-posta/Şifre girişini etkinleştir.',
+    'auth/unauthorized-domain': 'Bu site adresi Firebase\'de yetkili domain listesinde değil — Authentication → Settings → Authorized domains kısmına ekle.',
   };
   return map[err.code] || ('Hata: ' + err.message);
 }
 
-auth.onAuthStateChanged((user) => {
-  if(user){
-    authOverlay.hidden = true;
-    appRoot.hidden = false;
-    userEmailLabel.textContent = user.email;
-    attachProductsListener();
-  } else {
-    appRoot.hidden = true;
-    authOverlay.hidden = false;
-    if(unsubscribeProducts){ unsubscribeProducts(); unsubscribeProducts = null; }
-    products = [];
-  }
-});
+if(auth){
+  auth.onAuthStateChanged((user) => {
+    if(user){
+      authOverlay.hidden = true;
+      appRoot.hidden = false;
+      userEmailLabel.textContent = user.email;
+      attachProductsListener();
+    } else {
+      appRoot.hidden = true;
+      authOverlay.hidden = false;
+      if(unsubscribeProducts){ unsubscribeProducts(); unsubscribeProducts = null; }
+      products = [];
+    }
+  });
+}
 
 // ---------- Firestore: ürün verisi (tüm hesaplar arasında ortak) ----------
 function attachProductsListener(){
