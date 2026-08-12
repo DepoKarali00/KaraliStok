@@ -1,0 +1,45 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3E8E4F"/>
+      <stop offset="1" stop-color="#2F6E3C"/>
+    </linearGradient>
+    <linearGradient id="brickFace" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E23A32"/>
+      <stop offset="1" stop-color="#C41E24"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+
+  <!-- baseplate dot texture -->
+  <g fill="#ffffff" opacity="0.08">
+    <circle cx="60" cy="60" r="10"/>
+    <circle cx="452" cy="60" r="10"/>
+    <circle cx="60" cy="452" r="10"/>
+    <circle cx="452" cy="452" r="10"/>
+  </g>
+
+  <!-- brick shadow -->
+  <rect x="106" y="230" width="300" height="150" rx="22" fill="#000000" opacity="0.18"/>
+
+  <!-- brick body -->
+  <rect x="96" y="206" width="300" height="150" rx="22" fill="url(#brickFace)"/>
+  <rect x="96" y="206" width="300" height="150" rx="22" fill="none" stroke="#9A1219" stroke-width="4"/>
+
+  <!-- studs -->
+  <circle cx="171" cy="180" r="34" fill="#E23A32" stroke="#9A1219" stroke-width="4"/>
+  <circle cx="246" cy="180" r="34" fill="#E23A32" stroke="#9A1219" stroke-width="4"/>
+  <circle cx="321" cy="180" r="34" fill="#E23A32" stroke="#9A1219" stroke-width="4"/>
+
+  <!-- stud highlights -->
+  <circle cx="171" cy="180" r="34" fill="none" stroke="#F3766F" stroke-width="3" opacity="0.6"/>
+  <circle cx="246" cy="180" r="34" fill="none" stroke="#F3766F" stroke-width="3" opacity="0.6"/>
+  <circle cx="321" cy="180" r="34" fill="none" stroke="#F3766F" stroke-width="3" opacity="0.6"/>
+
+  <!-- brick face highlight -->
+  <rect x="96" y="206" width="300" height="34" rx="22" fill="#ffffff" opacity="0.12"/>
+
+  <!-- small K mark for Karali -->
+  <text x="256" y="325" text-anchor="middle" font-family="Arial, sans-serif" font-weight="800" font-size="56" fill="#ffffff">K</text>
+</svg>

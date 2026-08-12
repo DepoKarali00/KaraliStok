@@ -1,40 +1,29 @@
-// ---------- Depo verisi ----------
-const STORAGE_KEY = 'tugla-depo-urunler';
+// =========================================================
+// Karali Depo — Stok Kontrol
+// Firebase Authentication (e-posta/şifre) + Firestore (gerçek
+// zamanlı, tüm cihazlar arasında ortak veri) kullanır.
+// Kurulum için README.md → "Firebase Kurulumu" bölümüne bak.
+// =========================================================
 
-function loadProducts(){
-  try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : seedProducts();
-  }catch(e){
-    console.error('Depo okunamadı:', e);
-    return [];
-  }
-}
+let products = [];
+let unsubscribeProducts = null;
 
-function saveProducts(){
-  try{
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
-  }catch(e){
-    console.error('Depo kaydedilemedi:', e);
-    showToast('Kaydetme hatası — tarayıcı depolamasına erişilemedi.');
-  }
-}
-
-function seedProducts(){
-  return [
-    {id: uid(), name:'Kırmızı 2x4 Tuğla', sku:'LG-2X4-RD', category:'Bloklar', qty:120, min:20, price:2.5},
-    {id: uid(), name:'Mavi 2x2 Plaka', sku:'LG-2X2-BL', category:'Plakalar', qty:8, min:15, price:1.2},
-    {id: uid(), name:'Sarı Minifigür Kafası', sku:'LG-MF-HD', category:'Minifigür', qty:0, min:10, price:0.8},
-  ];
-}
-
-function uid(){
-  return Math.random().toString(36).slice(2,9);
-}
-
-let products = loadProducts();
+const PRODUCTS_COLLECTION = 'products';
 
 // ---------- DOM referansları ----------
+const authOverlay = document.getElementById('authOverlay');
+const authForm = document.getElementById('authForm');
+const authTitle = document.getElementById('authTitle');
+const authSubtitle = document.getElementById('authSubtitle');
+const authEmail = document.getElementById('authEmail');
+const authPassword = document.getElementById('authPassword');
+const authError = document.getElementById('authError');
+const authSubmitBtn = document.getElementById('authSubmitBtn');
+const authToggleBtn = document.getElementById('authToggleBtn');
+const appRoot = document.getElementById('appRoot');
+const userEmailLabel = document.getElementById('userEmailLabel');
+const logoutBtn = document.getElementById('logoutBtn');
+
 const grid = document.getElementById('grid');
 const emptyState = document.getElementById('emptyState');
 const searchInput = document.getElementById('searchInput');
@@ -45,59 +34,112 @@ const productForm = document.getElementById('productForm');
 const modalTitle = document.getElementById('modalTitle');
 const categoryList = document.getElementById('categoryList');
 
-document.getElementById('addBtn').addEventListener('click', () => openModal());
-document.getElementById('cancelBtn').addEventListener('click', closeModal);
-modalOverlay.addEventListener('click', (e) => { if(e.target === modalOverlay) closeModal(); });
-productForm.addEventListener('submit', handleSubmit);
-searchInput.addEventListener('input', render);
-categoryFilter.addEventListener('change', render);
-statusFilter.addEventListener('change', render);
-document.getElementById('exportBtn').addEventListener('click', exportData);
-document.getElementById('importInput').addEventListener('change', importData);
+let authMode = 'login'; // 'login' | 'register'
 
-const fImage = document.getElementById('fImage');
-const fImageData = document.getElementById('fImageData');
-const imagePreview = document.getElementById('imagePreview');
-const removeImageBtn = document.getElementById('removeImageBtn');
+// ---------- Kimlik doğrulama ----------
+authToggleBtn.addEventListener('click', () => {
+  authMode = authMode === 'login' ? 'register' : 'login';
+  updateAuthUI();
+});
 
-fImage.addEventListener('change', handleImageSelect);
-removeImageBtn.addEventListener('click', clearImageField);
-
-function handleImageSelect(e){
-  const file = e.target.files[0];
-  if(!file) return;
-  if(!file.type.startsWith('image/')){
-    showToast('Lütfen bir görsel dosyası seç.');
-    return;
-  }
-  if(file.size > 1.5 * 1024 * 1024){
-    showToast('Görsel çok büyük — 1.5MB altında bir dosya seç.');
-    return;
-  }
-  const reader = new FileReader();
-  reader.onload = () => {
-    fImageData.value = reader.result;
-    setImagePreview(reader.result);
-  };
-  reader.readAsDataURL(file);
-}
-
-function setImagePreview(dataUrl){
-  if(dataUrl){
-    imagePreview.classList.remove('empty');
-    imagePreview.innerHTML = `<img src="${dataUrl}" alt="">`;
-    removeImageBtn.hidden = false;
+function updateAuthUI(){
+  authError.hidden = true;
+  if(authMode === 'login'){
+    authTitle.textContent = 'Giriş Yap';
+    authSubtitle.textContent = "Karali Depo'ya erişmek için giriş yap.";
+    authSubmitBtn.textContent = 'Giriş Yap';
+    authToggleBtn.textContent = 'Hesabın yok mu? Kayıt ol';
+    authPassword.setAttribute('autocomplete', 'current-password');
   } else {
-    imagePreview.classList.add('empty');
-    imagePreview.textContent = 'Görsel yok';
-    removeImageBtn.hidden = true;
+    authTitle.textContent = 'Kayıt Ol';
+    authSubtitle.textContent = 'E-posta ve şifre ile yeni bir hesap oluştur.';
+    authSubmitBtn.textContent = 'Kayıt Ol';
+    authToggleBtn.textContent = 'Zaten hesabın var mı? Giriş yap';
+    authPassword.setAttribute('autocomplete', 'new-password');
   }
 }
 
-function clearImageField(){
-  fImageData.value = '';
-  fImage.value = '';
-  setImagePreview(null);
+authForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  authError.hidden = true;
+  const email = authEmail.value.trim();
+  const password = authPassword.value;
+  authSubmitBtn.disabled = true;
+
+  try{
+    if(authMode === 'login'){
+      await auth.signInWithEmailAndPassword(email, password);
+    } else {
+      await auth.createUserWithEmailAndPassword(email, password);
+    }
+  }catch(err){
+    authError.textContent = translateAuthError(err);
+    authError.hidden = false;
+  }finally{
+    authSubmitBtn.disabled = false;
+  }
+});
+
+logoutBtn.addEventListener('click', () => auth.signOut());
+
+function translateAuthError(err){
+  const map = {
+    'auth/invalid-email': 'Geçersiz e-posta adresi.',
+    'auth/user-not-found': 'Bu e-posta ile kayıtlı bir hesap bulunamadı.',
+    'auth/wrong-password': 'Şifre hatalı.',
+    'auth/invalid-credential': 'E-posta veya şifre hatalı.',
+    'auth/email-already-in-use': 'Bu e-posta zaten kayıtlı — giriş yapmayı dene.',
+    'auth/weak-password': 'Şifre en az 6 karakter olmalı.',
+    'auth/network-request-failed': 'Bağlantı hatası — internetini kontrol et.',
+    'auth/configuration-not-found': 'Firebase yapılandırması eksik — firebase-config.js dosyasını doldurduğundan emin ol ve Firebase Console\'da E-posta/Şifre girişini etkinleştir.',
+  };
+  return map[err.code] || ('Hata: ' + err.message);
+}
+
+auth.onAuthStateChanged((user) => {
+  if(user){
+    authOverlay.hidden = true;
+    appRoot.hidden = false;
+    userEmailLabel.textContent = user.email;
+    attachProductsListener();
+  } else {
+    appRoot.hidden = true;
+    authOverlay.hidden = false;
+    if(unsubscribeProducts){ unsubscribeProducts(); unsubscribeProducts = null; }
+    products = [];
+  }
+});
+
+// ---------- Firestore: ürün verisi (tüm hesaplar arasında ortak) ----------
+function attachProductsListener(){
+  if(unsubscribeProducts) return;
+  unsubscribeProducts = db.collection(PRODUCTS_COLLECTION)
+    .orderBy('name')
+    .onSnapshot(
+      (snapshot) => {
+        products = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+        render();
+      },
+      (err) => {
+        console.error('Firestore okuma hatası:', err);
+        showToast('Veriler yüklenemedi — Firestore kurulumunu kontrol et.');
+      }
+    );
+}
+
+async function addProductToDb(data){
+  await db.collection(PRODUCTS_COLLECTION).add({
+    ...data,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+}
+
+async function updateProductInDb(id, data){
+  await db.collection(PRODUCTS_COLLECTION).doc(id).update(data);
+}
+
+async function deleteProductFromDb(id){
+  await db.collection(PRODUCTS_COLLECTION).doc(id).delete();
 }
 
 // ---------- Durum hesaplama ----------
@@ -110,7 +152,6 @@ const statusLabel = {ok:'Stokta', low:'Azalıyor', out:'Tükendi'};
 
 // ---------- Render ----------
 function render(){
-  // kategori filtre listesini güncelle
   const cats = [...new Set(products.map(p => p.category).filter(Boolean))].sort();
   const currentCat = categoryFilter.value;
   categoryFilter.innerHTML = '<option value="">Tüm kategoriler</option>' +
@@ -180,10 +221,10 @@ function renderCard(p){
     </div>
   `;
 
-  card.querySelector('[data-action="inc"]').addEventListener('click', () => changeQty(p.id, 1));
-  card.querySelector('[data-action="dec"]').addEventListener('click', () => changeQty(p.id, -1));
+  card.querySelector('[data-action="inc"]').addEventListener('click', () => changeQty(p, 1));
+  card.querySelector('[data-action="dec"]').addEventListener('click', () => changeQty(p, -1));
   card.querySelector('[data-action="edit"]').addEventListener('click', () => openModal(p));
-  card.querySelector('[data-action="delete"]').addEventListener('click', () => deleteProduct(p.id));
+  card.querySelector('[data-action="delete"]').addEventListener('click', () => deleteProduct(p));
 
   return card;
 }
@@ -198,22 +239,97 @@ function updateStats(){
 }
 
 // ---------- İşlemler ----------
-function changeQty(id, delta){
-  const p = products.find(x => x.id === id);
-  if(!p) return;
-  p.qty = Math.max(0, Number(p.qty) + delta);
-  saveProducts();
-  render();
+async function changeQty(p, delta){
+  const newQty = Math.max(0, Number(p.qty) + delta);
+  try{
+    await updateProductInDb(p.id, {qty: newQty});
+  }catch(err){
+    console.error(err);
+    showToast('Güncellenemedi — bağlantını kontrol et.');
+  }
 }
 
-function deleteProduct(id){
-  const p = products.find(x => x.id === id);
-  if(!p) return;
+async function deleteProduct(p){
   if(!confirm(`"${p.name}" silinsin mi?`)) return;
-  products = products.filter(x => x.id !== id);
-  saveProducts();
-  render();
-  showToast('Ürün silindi.');
+  try{
+    await deleteProductFromDb(p.id);
+    showToast('Ürün silindi.');
+  }catch(err){
+    console.error(err);
+    showToast('Silinemedi — bağlantını kontrol et.');
+  }
+}
+
+document.getElementById('addBtn').addEventListener('click', () => openModal());
+document.getElementById('cancelBtn').addEventListener('click', closeModal);
+modalOverlay.addEventListener('click', (e) => { if(e.target === modalOverlay) closeModal(); });
+productForm.addEventListener('submit', handleSubmit);
+searchInput.addEventListener('input', render);
+categoryFilter.addEventListener('change', render);
+statusFilter.addEventListener('change', render);
+document.getElementById('exportBtn').addEventListener('click', exportData);
+document.getElementById('importInput').addEventListener('change', importData);
+
+const fImage = document.getElementById('fImage');
+const fImageData = document.getElementById('fImageData');
+const imagePreview = document.getElementById('imagePreview');
+const removeImageBtn = document.getElementById('removeImageBtn');
+
+fImage.addEventListener('change', handleImageSelect);
+removeImageBtn.addEventListener('click', clearImageField);
+
+function handleImageSelect(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  if(!file.type.startsWith('image/')){
+    showToast('Lütfen bir görsel dosyası seç.');
+    return;
+  }
+  const img = new Image();
+  const reader = new FileReader();
+  reader.onload = () => {
+    img.onload = () => {
+      const dataUrl = resizeImage(img, 480, 0.72);
+      fImageData.value = dataUrl;
+      setImagePreview(dataUrl);
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// Görseli 1MB'lık Firestore belge sınırı içinde tutmak için küçültüp sıkıştırır
+function resizeImage(img, maxSize, quality){
+  const canvas = document.createElement('canvas');
+  let {width, height} = img;
+  if(width > height){
+    if(width > maxSize){ height = Math.round(height * maxSize / width); width = maxSize; }
+  } else {
+    if(height > maxSize){ width = Math.round(width * maxSize / height); height = maxSize; }
+  }
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0, width, height);
+  return canvas.toDataURL('image/jpeg', quality);
+}
+
+function setImagePreview(dataUrl){
+  if(dataUrl){
+    imagePreview.classList.remove('empty');
+    imagePreview.innerHTML = `<img src="${dataUrl}" alt="">`;
+    removeImageBtn.hidden = false;
+  } else {
+    imagePreview.classList.add('empty');
+    imagePreview.textContent = 'Görsel yok';
+    removeImageBtn.hidden = true;
+  }
+}
+
+function clearImageField(){
+  fImageData.value = '';
+  fImage.value = '';
+  setImagePreview(null);
 }
 
 function openModal(product){
@@ -244,7 +360,7 @@ function closeModal(){
   modalOverlay.hidden = true;
 }
 
-function handleSubmit(e){
+async function handleSubmit(e){
   e.preventDefault();
   const id = document.getElementById('productId').value;
   const data = {
@@ -258,17 +374,23 @@ function handleSubmit(e){
   };
   if(!data.name){ return; }
 
-  if(id){
-    const p = products.find(x => x.id === id);
-    Object.assign(p, data);
-    showToast('Ürün güncellendi.');
-  } else {
-    products.push({id: uid(), ...data});
-    showToast('Ürün eklendi.');
+  const submitBtn = productForm.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  try{
+    if(id){
+      await updateProductInDb(id, data);
+      showToast('Ürün güncellendi.');
+    } else {
+      await addProductToDb(data);
+      showToast('Ürün eklendi.');
+    }
+    closeModal();
+  }catch(err){
+    console.error(err);
+    showToast('Kaydedilemedi — bağlantını kontrol et.');
+  }finally{
+    submitBtn.disabled = false;
   }
-  saveProducts();
-  closeModal();
-  render();
 }
 
 // ---------- Yedekleme ----------
@@ -277,34 +399,38 @@ function exportData(){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `tugla-depo-yedek-${new Date().toISOString().slice(0,10)}.json`;
+  a.download = `karali-depo-yedek-${new Date().toISOString().slice(0,10)}.json`;
   a.click();
   URL.revokeObjectURL(url);
   showToast('Yedek indirildi.');
 }
 
-function importData(e){
+async function importData(e){
   const file = e.target.files[0];
   if(!file) return;
   const reader = new FileReader();
-  reader.onload = () => {
+  reader.onload = async () => {
     try{
       const parsed = JSON.parse(reader.result);
       if(!Array.isArray(parsed)) throw new Error('Geçersiz format');
-      products = parsed.map(p => ({
-        id: p.id || uid(),
-        name: p.name || 'İsimsiz ürün',
-        sku: p.sku || '',
-        category: p.category || '',
-        qty: Number(p.qty) || 0,
-        min: Number(p.min) || 0,
-        price: Number(p.price) || 0,
-        image: p.image || '',
-      }));
-      saveProducts();
-      render();
+      const batch = db.batch();
+      parsed.forEach(p => {
+        const ref = db.collection(PRODUCTS_COLLECTION).doc();
+        batch.set(ref, {
+          name: p.name || 'İsimsiz ürün',
+          sku: p.sku || '',
+          category: p.category || '',
+          qty: Number(p.qty) || 0,
+          min: Number(p.min) || 0,
+          price: Number(p.price) || 0,
+          image: p.image || '',
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+      });
+      await batch.commit();
       showToast('Yedek yüklendi.');
     }catch(err){
+      console.error(err);
       showToast('Dosya okunamadı — geçerli bir yedek JSON dosyası seç.');
     }
   };
@@ -328,4 +454,4 @@ function escapeHtml(str){
 }
 
 // ---------- Başlangıç ----------
-render();
+updateAuthUI();

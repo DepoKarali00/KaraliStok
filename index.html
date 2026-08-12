@@ -3,29 +3,64 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tuğla Depo — Stok Kontrol</title>
+<title>Karali Depo</title>
+
+<!-- Ana ekrana ekleme / PWA ayarları -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#D4212A">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Karali Depo">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div class="baseplate">
+<!-- Giriş / Kayıt ekranı -->
+<div id="authOverlay" class="modal-overlay auth-overlay">
+  <form id="authForm" class="modal brick-modal auth-modal">
+    <div class="auth-logo">
+      <img src="icons/icon-192.png" alt="Karali Depo">
+    </div>
+    <h2 id="authTitle">Giriş Yap</h2>
+    <p id="authSubtitle" class="auth-subtitle">Karali Depo'ya erişmek için giriş yap.</p>
+
+    <label>E-posta
+      <input type="email" id="authEmail" required placeholder="ornek@eposta.com" autocomplete="username">
+    </label>
+    <label>Şifre
+      <input type="password" id="authPassword" required placeholder="En az 6 karakter" autocomplete="current-password" minlength="6">
+    </label>
+
+    <p id="authError" class="auth-error" hidden></p>
+
+    <button type="submit" class="btn btn-primary auth-submit" id="authSubmitBtn">Giriş Yap</button>
+    <button type="button" id="authToggleBtn" class="btn btn-ghost auth-toggle">Hesabın yok mu? Kayıt ol</button>
+  </form>
+</div>
+
+<div class="baseplate" id="appRoot" hidden>
 
   <header class="header">
     <div class="brick logo-brick">
       <div class="studs"><span></span><span></span></div>
       <div class="brick-face">
-        <h1>TUĞLA DEPO</h1>
+        <h1>KARALI DEPO</h1>
         <p class="tag">stok kontrol paneli</p>
       </div>
     </div>
     <div class="header-actions">
+      <span id="userEmailLabel" class="user-email"></span>
       <button id="exportBtn" class="btn btn-ghost">⭳ Yedek Al</button>
       <label class="btn btn-ghost file-btn">⭱ Yedek Yükle
         <input type="file" id="importInput" accept="application/json" hidden>
       </label>
       <button id="addBtn" class="btn btn-primary">+ Yeni Ürün</button>
+      <button id="logoutBtn" class="btn btn-ghost">Çıkış Yap</button>
     </div>
   </header>
 
@@ -140,6 +175,11 @@
 
 <div id="toast" class="toast" hidden></div>
 
+<!-- Firebase (Google) — kimlik doğrulama ve tüm cihazlar arası veri senkronizasyonu için -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
 <script src="script.js"></script>
 </body>
 </html>
