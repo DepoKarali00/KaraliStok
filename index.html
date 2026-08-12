@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tuğla Depo — Stok Kontrol</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="baseplate">
+
+  <header class="header">
+    <div class="brick logo-brick">
+      <div class="studs"><span></span><span></span></div>
+      <div class="brick-face">
+        <h1>TUĞLA DEPO</h1>
+        <p class="tag">stok kontrol paneli</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button id="exportBtn" class="btn btn-ghost">⭳ Yedek Al</button>
+      <label class="btn btn-ghost file-btn">⭱ Yedek Yükle
+        <input type="file" id="importInput" accept="application/json" hidden>
+      </label>
+      <button id="addBtn" class="btn btn-primary">+ Yeni Ürün</button>
+    </div>
+  </header>
+
+  <section class="stats-row">
+    <div class="brick stat-brick brick-blue">
+      <div class="studs"><span></span></div>
+      <div class="brick-face">
+        <span class="stat-num" id="statTotal">0</span>
+        <span class="stat-label">Ürün Çeşidi</span>
+      </div>
+    </div>
+    <div class="brick stat-brick brick-green">
+      <div class="studs"><span></span></div>
+      <div class="brick-face">
+        <span class="stat-num" id="statUnits">0</span>
+        <span class="stat-label">Toplam Adet</span>
+      </div>
+    </div>
+    <div class="brick stat-brick brick-yellow">
+      <div class="studs"><span></span></div>
+      <div class="brick-face">
+        <span class="stat-num" id="statLow">0</span>
+        <span class="stat-label">Azalan Stok</span>
+      </div>
+    </div>
+    <div class="brick stat-brick brick-red">
+      <div class="studs"><span></span></div>
+      <div class="brick-face">
+        <span class="stat-num" id="statOut">0</span>
+        <span class="stat-label">Tükenen</span>
+      </div>
+    </div>
+    <div class="brick stat-brick brick-black">
+      <div class="studs"><span></span></div>
+      <div class="brick-face">
+        <span class="stat-num" id="statValue">₺0</span>
+        <span class="stat-label">Stok Değeri</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="toolbar">
+    <input type="text" id="searchInput" placeholder="Ürün adı veya kod ara…" class="search-input">
+    <select id="categoryFilter" class="cat-select">
+      <option value="">Tüm kategoriler</option>
+    </select>
+    <select id="statusFilter" class="cat-select">
+      <option value="">Tüm durumlar</option>
+      <option value="ok">Stokta</option>
+      <option value="low">Azalıyor</option>
+      <option value="out">Tükendi</option>
+    </select>
+  </section>
+
+  <section id="grid" class="grid"></section>
+  <p id="emptyState" class="empty-state" hidden>Henüz ürün yok. "+ Yeni Ürün" ile başla — depo bomboş bir baseplate gibi duruyor.</p>
+
+</div>
+
+<!-- Ürün Ekle/Düzenle Modal -->
+<div id="modalOverlay" class="modal-overlay" hidden>
+  <form id="productForm" class="modal brick-modal">
+    <h2 id="modalTitle">Yeni Ürün</h2>
+    <input type="hidden" id="productId">
+    <input type="hidden" id="fImageData">
+
+    <label>Ürün adı
+      <input type="text" id="fName" required placeholder="ör. Kırmızı 2x4 Tuğla">
+    </label>
+
+    <label>Ürün görseli
+      <div class="image-field">
+        <div id="imagePreview" class="image-preview empty">Görsel yok</div>
+        <div class="image-field-actions">
+          <label class="btn btn-ghost file-btn small">Görsel Seç
+            <input type="file" id="fImage" accept="image/*" hidden>
+          </label>
+          <button type="button" id="removeImageBtn" class="btn btn-ghost small" hidden>Kaldır</button>
+        </div>
+      </div>
+    </label>
+
+    <div class="field-row">
+      <label>Ürün kodu (SKU)
+        <input type="text" id="fSku" placeholder="ör. LG-2X4-RD">
+      </label>
+      <label>Kategori
+        <input type="text" id="fCategory" list="categoryList" placeholder="ör. Bloklar">
+        <datalist id="categoryList"></datalist>
+      </label>
+    </div>
+
+    <div class="field-row">
+      <label>Stok adedi
+        <input type="number" id="fQty" min="0" value="0" required>
+      </label>
+      <label>Minimum stok
+        <input type="number" id="fMin" min="0" value="5" required>
+      </label>
+    </div>
+
+    <label>Birim fiyat (₺)
+      <input type="number" id="fPrice" min="0" step="0.01" value="0">
+    </label>
+
+    <div class="modal-actions">
+      <button type="button" id="cancelBtn" class="btn btn-ghost">Vazgeç</button>
+      <button type="submit" class="btn btn-primary">Kaydet</button>
+    </div>
+  </form>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="script.js"></script>
+</body>
+</html>
