@@ -143,8 +143,9 @@ if(auth){
 }
 
 // ---------- Firestore: ürün verisi (tüm hesaplar arasında ortak) ----------
-function attachProductsListener(){
-  if(unsubscribeProducts) return;
+function attachProductsListener(force){
+  if(unsubscribeProducts && !force) return;
+  if(unsubscribeProducts){ unsubscribeProducts(); unsubscribeProducts = null; }
   unsubscribeProducts = db.collection(PRODUCTS_COLLECTION)
     .orderBy('name')
     .onSnapshot(
@@ -158,6 +159,20 @@ function attachProductsListener(){
       }
     );
 }
+
+// Sekme arka plandan öne gelince, uygulama açılınca veya internet geri
+// gelince canlı bağlantıyı zorla tazele — bazı tarayıcılar/telefonlar
+// sekme arka plandayken bağlantıyı uykuya alıp geç uyandırabiliyor.
+function refreshProductsIfLoggedIn(){
+  if(auth && auth.currentUser){
+    attachProductsListener(true);
+  }
+}
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible') refreshProductsIfLoggedIn();
+});
+window.addEventListener('focus', refreshProductsIfLoggedIn);
+window.addEventListener('online', refreshProductsIfLoggedIn);
 
 async function addProductToDb(data){
   await db.collection(PRODUCTS_COLLECTION).add({
@@ -301,6 +316,10 @@ categoryFilter.addEventListener('change', render);
 statusFilter.addEventListener('change', render);
 document.getElementById('exportBtn').addEventListener('click', exportData);
 document.getElementById('importInput').addEventListener('change', importData);
+document.getElementById('refreshBtn').addEventListener('click', () => {
+  attachProductsListener(true);
+  showToast('Liste tazeleniyor…');
+});
 
 const fImage = document.getElementById('fImage');
 const fImageData = document.getElementById('fImageData');
