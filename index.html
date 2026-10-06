@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Karali Depo</title>
 
-<!-- Ana ekrana ekleme / PWA ayarları -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#D4212A">
 <link rel="icon" href="icons/icon-192.png">
@@ -28,21 +27,19 @@
     </div>
     <h2 id="authTitle">Giriş Yap</h2>
     <p id="authSubtitle" class="auth-subtitle">Karali Depo'ya erişmek için giriş yap.</p>
-
     <label>E-posta
       <input type="email" id="authEmail" required placeholder="ornek@eposta.com" autocomplete="username">
     </label>
     <label>Şifre
       <input type="password" id="authPassword" required placeholder="En az 6 karakter" autocomplete="current-password" minlength="6">
     </label>
-
     <p id="authError" class="auth-error" hidden></p>
-
     <button type="submit" class="btn btn-primary auth-submit" id="authSubmitBtn">Giriş Yap</button>
     <button type="button" id="authToggleBtn" class="btn btn-ghost auth-toggle">Hesabın yok mu? Kayıt ol</button>
   </form>
 </div>
 
+<!-- Ana uygulama -->
 <div class="baseplate" id="appRoot" hidden>
 
   <header class="header">
@@ -55,14 +52,18 @@
     </div>
     <div class="header-actions">
       <span id="userEmailLabel" class="user-email"></span>
-      <button id="exportBtn" class="btn btn-ghost">⭳ Yedek Al</button>
-      <label class="btn btn-ghost file-btn">⭱ Yedek Yükle
+      <button id="exportJsonBtn" class="btn btn-ghost" title="JSON Yedek">⭳ JSON</button>
+      <button id="exportCsvBtn" class="btn btn-ghost" title="CSV İndir">⭳ CSV</button>
+      <label class="btn btn-ghost file-btn" title="Yedek Yükle">⭱ Yükle
         <input type="file" id="importInput" accept="application/json" hidden>
       </label>
       <button id="addBtn" class="btn btn-primary">+ Yeni Ürün</button>
-      <button id="logoutBtn" class="btn btn-ghost">Çıkış Yap</button>
+      <button id="logoutBtn" class="btn btn-ghost">Çıkış</button>
     </div>
   </header>
+
+  <!-- Düşük / tükenen stok uyarı bandı -->
+  <div id="alertBanner" class="alert-banner" hidden></div>
 
   <section class="stats-row">
     <div class="brick stat-brick brick-blue">
@@ -103,7 +104,7 @@
   </section>
 
   <section class="toolbar">
-    <input type="text" id="searchInput" placeholder="Ürün adı veya kod ara…" class="search-input">
+    <input type="text" id="searchInput" placeholder="Ürün adı, SKU veya not ara…" class="search-input">
     <select id="categoryFilter" class="cat-select">
       <option value="">Tüm kategoriler</option>
     </select>
@@ -113,7 +114,18 @@
       <option value="low">Azalıyor</option>
       <option value="out">Tükendi</option>
     </select>
-    <button id="refreshBtn" type="button" class="btn btn-ghost" title="Listeyi tazele">⟳ Yenile</button>
+    <select id="sortSelect" class="cat-select">
+      <option value="status">Duruma göre</option>
+      <option value="name">Ada göre</option>
+      <option value="qty-asc">Azdan çoğa (adet)</option>
+      <option value="qty-desc">Çoktan aza (adet)</option>
+      <option value="price-desc">Fiyata göre</option>
+    </select>
+    <div class="view-toggle">
+      <button id="viewGrid" class="btn btn-ghost view-btn active" title="Izgara görünümü">⊞</button>
+      <button id="viewList" class="btn btn-ghost view-btn" title="Liste görünümü">☰</button>
+    </div>
+    <button id="refreshBtn" type="button" class="btn btn-ghost" title="Listeyi yenile">⟳</button>
   </section>
 
   <section id="grid" class="grid"></section>
@@ -121,25 +133,28 @@
 
 </div>
 
-<!-- Ürün Ekle/Düzenle Modal -->
+<!-- ===================== Ürün Ekle/Düzenle Modal ===================== -->
 <div id="modalOverlay" class="modal-overlay" hidden>
-  <form id="productForm" class="modal brick-modal">
+  <form id="productForm" class="modal brick-modal product-modal">
     <h2 id="modalTitle">Yeni Ürün</h2>
     <input type="hidden" id="productId">
-    <input type="hidden" id="fImageData">
 
-    <label>Ürün adı
+    <label>Ürün adı *
       <input type="text" id="fName" required placeholder="ör. Kırmızı 2x4 Tuğla">
     </label>
 
-    <label>Ürün görseli
-      <div class="image-field">
-        <div id="imagePreview" class="image-preview empty">Görsel yok</div>
-        <div class="image-field-actions">
-          <label class="btn btn-ghost file-btn small">Görsel Seç
-            <input type="file" id="fImage" accept="image/*" hidden>
-          </label>
-          <button type="button" id="removeImageBtn" class="btn btn-ghost small" hidden>Kaldır</button>
+    <!-- Çoklu Görsel Yükleme -->
+    <label>Ürün görselleri
+      <div class="image-upload-area" id="imageUploadArea">
+        <div id="imageGalleryPreview" class="image-gallery-preview"></div>
+        <label class="image-upload-trigger">
+          <span>📷 Görsel Ekle</span>
+          <small>Birden fazla seçebilirsin</small>
+          <input type="file" id="fImages" accept="image/*" multiple hidden>
+        </label>
+        <div id="uploadProgress" class="upload-progress" hidden>
+          <div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
+          <span id="progressText">Yükleniyor…</span>
         </div>
       </div>
     </label>
@@ -155,10 +170,10 @@
     </div>
 
     <div class="field-row">
-      <label>Stok adedi
+      <label>Stok adedi *
         <input type="number" id="fQty" min="0" value="0" required>
       </label>
-      <label>Minimum stok
+      <label>Minimum stok *
         <input type="number" id="fMin" min="0" value="5" required>
       </label>
     </div>
@@ -167,19 +182,45 @@
       <input type="number" id="fPrice" min="0" step="0.01" value="0">
     </label>
 
+    <label>Notlar / Açıklama
+      <textarea id="fNotes" rows="2" placeholder="Tedarikçi, raf kodu, özel notlar…"></textarea>
+    </label>
+
     <div class="modal-actions">
-      <button type="button" id="cancelBtn" class="btn btn-ghost">Vazgeç</button>
-      <button type="submit" class="btn btn-primary">Kaydet</button>
+      <button type="button" id="cancelBtn" class="btn btn-ghost modal-cancel">Vazgeç</button>
+      <button type="submit" class="btn btn-primary" id="saveBtn">Kaydet</button>
     </div>
   </form>
 </div>
 
-<div id="toast" class="toast" hidden></div>
+<!-- ===================== Resim Lightbox ===================== -->
+<div id="lightbox" class="lightbox" hidden>
+  <button id="lightboxClose" class="lightbox-close" aria-label="Kapat">✕</button>
+  <button id="lightboxPrev" class="lightbox-nav lightbox-prev" aria-label="Önceki">❮</button>
+  <img id="lightboxImg" src="" alt="Ürün görseli">
+  <button id="lightboxNext" class="lightbox-nav lightbox-next" aria-label="Sonraki">❯</button>
+  <div id="lightboxDots" class="lightbox-dots"></div>
+</div>
 
-<!-- Firebase (Google) — kimlik doğrulama ve tüm cihazlar arası veri senkronizasyonu için -->
+<!-- ===================== Stok Geçmişi Modal ===================== -->
+<div id="historyOverlay" class="modal-overlay" hidden>
+  <div class="modal brick-modal history-modal">
+    <h2 id="historyTitle">Stok Geçmişi</h2>
+    <div id="historyList" class="history-list"></div>
+    <div class="modal-actions">
+      <button id="historyCloseBtn" class="btn btn-ghost modal-cancel">Kapat</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<!-- Firebase Storage: çoklu görsel yükleme için -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script src="script.js"></script>
 </body>
