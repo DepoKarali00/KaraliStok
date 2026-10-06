@@ -6,6 +6,10 @@
 /* === RESET & DEĞIŞKENLER === */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* KRİTİK: CSS display:flex kuralları HTML hidden attribute'ünü ezer.
+   Bu satır, hidden attribute'ünün her zaman kazanmasını sağlar. */
+[hidden] { display: none !important; }
+
 :root {
   --red:        #D4212A;
   --red-dark:   #A31820;
