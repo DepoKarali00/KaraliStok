@@ -356,7 +356,7 @@ function renderCard(p) {
   return card;
 }
 
-// Büyük sayıları kısa biçimde göster: 17093 → ₺17K, 1500000 → ₺1.5M
+// Büyük sayıları kısa biçimde göster: 17093 → 17B, 1500000 → 1.5M
 function compactMoney(val) {
   if (val >= 1000000) return '₺' + (val / 1000000).toLocaleString('tr-TR', { maximumFractionDigits: 1 }) + 'M';
   if (val >= 10000)   return '₺' + (val / 1000).toLocaleString('tr-TR',    { maximumFractionDigits: 0 }) + 'B';
@@ -369,6 +369,33 @@ function compactNum(val) {
   return val.toLocaleString('tr-TR');
 }
 
+// Tıklanınca tam sayıyı göster / gizle
+function makeStatClickable(elId, compactVal, fullVal) {
+  const el = document.getElementById(elId);
+  // Tam değeri data attribute'ta sakla
+  el.dataset.compact = compactVal;
+  el.dataset.full    = fullVal;
+  el.dataset.expanded = 'false';
+
+  // Daha önce eklenmiş listener'ı temizlemek için clone-replace
+  const clone = el.cloneNode(true);
+  el.parentNode.replaceChild(clone, el);
+  const fresh = document.getElementById(elId);
+
+  fresh.addEventListener('click', () => {
+    const isExpanded = fresh.dataset.expanded === 'true';
+    if (isExpanded) {
+      fresh.textContent    = fresh.dataset.compact;
+      fresh.dataset.expanded = 'false';
+      fresh.classList.remove('stat-expanded');
+    } else {
+      fresh.textContent    = fresh.dataset.full;
+      fresh.dataset.expanded = 'true';
+      fresh.classList.add('stat-expanded');
+    }
+  });
+}
+
 function updateStats() {
   const total = products.length;
   const units = products.reduce((s, p) => s + Number(p.qty || 0), 0);
@@ -376,17 +403,21 @@ function updateStats() {
   const out   = products.filter(p => getStatus(p) === 'out').length;
   const val   = products.reduce((s, p) => s + Number(p.qty || 0) * Number(p.price || 0), 0);
 
+  // Kompakt değerleri göster
   document.getElementById('statTotal').textContent = compactNum(total);
   document.getElementById('statUnits').textContent = compactNum(units);
   document.getElementById('statLow').textContent   = compactNum(low);
   document.getElementById('statOut').textContent   = compactNum(out);
   document.getElementById('statValue').textContent = compactMoney(val);
 
-  // Tooltip ile tam değeri göster (hover)
-  document.getElementById('statValue').title =
-    '₺' + val.toLocaleString('tr-TR', { maximumFractionDigits: 2 });
-  document.getElementById('statUnits').title = units.toLocaleString('tr-TR') + ' adet';
+  // Tam değerleri ayarla ve tıklanabilir yap
+  makeStatClickable('statTotal', compactNum(total),  total.toLocaleString('tr-TR'));
+  makeStatClickable('statUnits', compactNum(units),  units.toLocaleString('tr-TR') + ' adet');
+  makeStatClickable('statLow',   compactNum(low),    low.toLocaleString('tr-TR') + ' ürün');
+  makeStatClickable('statOut',   compactNum(out),    out.toLocaleString('tr-TR') + ' ürün');
+  makeStatClickable('statValue', compactMoney(val),  '₺' + val.toLocaleString('tr-TR', { maximumFractionDigits: 2 }));
 }
+
 
 function updateAlertBanner() {
   const outItems = products.filter(p => getStatus(p) === 'out');

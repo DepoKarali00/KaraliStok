@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    Karali Depo â€” Style v2.0
    LEGO brick temalÄ± stok kontrol paneli
    ============================================================ */
@@ -335,6 +335,24 @@ body {
   margin-top: 4px;
   white-space: nowrap;
 }
+
+/* Tıklanabilir stat sayısı */
+.stat-num {
+  cursor: pointer;
+  border-radius: 4px;
+  transition: transform 0.12s ease, opacity 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.stat-num:hover  { opacity: 0.85; }
+.stat-num:active { transform: scale(0.92); }
+
+/* Tam sayı gösterildiğinde */
+.stat-num.stat-expanded {
+  font-size: clamp(0.75rem, 2.6vw, 1.2rem);
+  border-bottom: 2px solid rgba(255,255,255,0.4);
+  padding-bottom: 2px;
+}
+
 
 /* ============================================================
    ARAÃ‡ Ã‡UBUÄU
