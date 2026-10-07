@@ -1,13 +1,13 @@
-/* ============================================================
-   Karali Depo — Style v2.0
-   LEGO brick temalı stok kontrol paneli
+﻿/* ============================================================
+   Karali Depo â€” Style v2.0
+   LEGO brick temalÄ± stok kontrol paneli
    ============================================================ */
 
-/* === RESET & DEĞIŞKENLER === */
+/* === RESET & DEÄIÅKENLER === */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* KRİTİK: CSS display:flex kuralları HTML hidden attribute'ünü ezer.
-   Bu satır, hidden attribute'ünün her zaman kazanmasını sağlar. */
+/* KRÄ°TÄ°K: CSS display:flex kurallarÄ± HTML hidden attribute'Ã¼nÃ¼ ezer.
+   Bu satÄ±r, hidden attribute'Ã¼nÃ¼n her zaman kazanmasÄ±nÄ± saÄŸlar. */
 [hidden] { display: none !important; }
 
 :root {
@@ -20,7 +20,7 @@
   --black:      #1a1a1a;
   --white:      #FAFAFA;
 
-  --bg:         #2D6B3B;   /* baseplate koyu yeşil */
+  --bg:         #2D6B3B;   /* baseplate koyu yeÅŸil */
   --card-bg:    #FFFFFF;
   --text:       #1a1a1a;
   --text-muted: #777;
@@ -88,7 +88,7 @@ body {
 .file-btn { cursor: pointer; }
 
 /* ============================================================
-   TUĞLA (BRICK) ELEMANLARI
+   TUÄLA (BRICK) ELEMANLARI
    ============================================================ */
 .brick {
   background: var(--card-bg);
@@ -175,22 +175,119 @@ body {
 /* ============================================================
    UYARI BANDI
    ============================================================ */
+}
+
+/* ============================================================
+   UYARI BANDI â€” Kompakt bildirim butonlarÄ±
+   ============================================================ */
 .alert-banner {
-  background: #FFF8DC;
-  border-bottom: 3px solid #F5C400;
-  color: #6b4e00;
-  padding: 10px 20px;
-  font-size: 0.84rem;
-  line-height: 1.55;
+  background: #1e1e1e;
+  border-bottom: 3px solid #333;
+  padding: 8px 20px;
   animation: slideDown 0.25s ease;
 }
+
+
 @keyframes slideDown {
   from { transform: translateY(-100%); opacity: 0; }
   to   { transform: translateY(0); opacity: 1; }
 }
 
+.alert-pills {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Bildirim pill butonu */
+.alert-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px 6px 10px;
+  border-radius: 24px;
+  border: none;
+  font-family: var(--font);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition);
+  user-select: none;
+  white-space: nowrap;
+}
+
+.pill-out {
+  background: rgba(229,57,53,0.18);
+  color: #ff6b6b;
+  box-shadow: inset 0 0 0 1.5px rgba(229,57,53,0.4);
+}
+.pill-out:hover, .pill-out.active {
+  background: rgba(229,57,53,0.30);
+  color: #ff8a8a;
+  box-shadow: inset 0 0 0 1.5px rgba(229,57,53,0.7);
+}
+
+.pill-low {
+  background: rgba(245,196,0,0.15);
+  color: #f5c400;
+  box-shadow: inset 0 0 0 1.5px rgba(245,196,0,0.35);
+}
+.pill-low:hover, .pill-low.active {
+  background: rgba(245,196,0,0.25);
+  color: #ffd740;
+  box-shadow: inset 0 0 0 1.5px rgba(245,196,0,0.65);
+}
+
+.pill-count {
+  font-family: var(--mono);
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.pill-icon  { font-size: 0.8rem; line-height: 1; }
+.pill-label { font-size: 0.78rem; }
+.pill-arrow {
+  font-size: 0.7rem;
+  transition: transform 0.18s ease;
+  opacity: 0.7;
+}
+.alert-pill.active .pill-arrow { transform: rotate(180deg); }
+
+/* AÃ§Ä±lÄ±r Ã¼rÃ¼n adlarÄ± paneli */
+.alert-detail {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 8px 4px 4px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  margin-top: 2px;
+  animation: fadeIn 0.18s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.alert-name-chip {
+  display: inline-block;
+  padding: 3px 9px;
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.75);
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border: 1px solid rgba(255,255,255,0.12);
+  white-space: nowrap;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ============================================================
-   İSTATİSTİK SIRA
+   Ä°STATÄ°STÄ°K SIRA
    ============================================================ */
 .stats-row {
   display: flex;
@@ -201,13 +298,18 @@ body {
 }
 .stats-row::-webkit-scrollbar { display: none; }
 
-.stat-brick { flex: 1; min-width: 100px; text-align: center; }
+.stat-brick {
+  flex: 1;
+  min-width: 96px;
+  text-align: center;
+  overflow: visible !important;
+}
 
-.brick-blue  { background: #1565C0; color: #fff; box-shadow: 0 5px 0 #0D47A1, var(--shadow-sm); }
-.brick-green { background: #2E7D32; color: #fff; box-shadow: 0 5px 0 #1B5E20, var(--shadow-sm); }
-.brick-yellow{ background: #F5C400; color: #5a4000; box-shadow: 0 5px 0 #C9A000, var(--shadow-sm); }
-.brick-red   { background: #D4212A; color: #fff; box-shadow: 0 5px 0 #A31820, var(--shadow-sm); }
-.brick-black { background: #212121; color: #fff; box-shadow: 0 5px 0 #000,    var(--shadow-sm); }
+.brick-blue   { background: #1565C0; color: #fff; box-shadow: 0 5px 0 #0D47A1, var(--shadow-sm); }
+.brick-green  { background: #2E7D32; color: #fff; box-shadow: 0 5px 0 #1B5E20, var(--shadow-sm); }
+.brick-yellow { background: #F5C400; color: #5a4000; box-shadow: 0 5px 0 #C9A000, var(--shadow-sm); }
+.brick-red    { background: #D4212A; color: #fff; box-shadow: 0 5px 0 #A31820, var(--shadow-sm); }
+.brick-black  { background: #212121; color: #fff; box-shadow: 0 5px 0 #000, var(--shadow-sm); }
 
 .brick-blue  .studs span,
 .brick-green .studs span,
@@ -217,23 +319,25 @@ body {
 
 .stat-num {
   display: block;
-  font-size: 1.9rem;
+  font-size: clamp(1.05rem, 3.6vw, 1.9rem);
   font-weight: 800;
   font-family: var(--mono);
   line-height: 1;
+  white-space: nowrap;
 }
 .stat-label {
   display: block;
-  font-size: 0.67rem;
+  font-size: clamp(0.55rem, 1.3vw, 0.67rem);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.4px;
   opacity: 0.84;
   margin-top: 4px;
+  white-space: nowrap;
 }
 
 /* ============================================================
-   ARAÇ ÇUBUĞU
+   ARAÃ‡ Ã‡UBUÄU
    ============================================================ */
 .toolbar {
   display: flex;
@@ -324,7 +428,7 @@ body {
 }
 
 /* ============================================================
-   ÜRÜN KARTLARI
+   ÃœRÃœN KARTLARI
    ============================================================ */
 .product-brick {
   display: flex;
@@ -356,7 +460,7 @@ body {
   padding: 10px 12px 12px;
 }
 
-/* --- Kart üst kısmı --- */
+/* --- Kart Ã¼st kÄ±smÄ± --- */
 .p-top {
   display: flex;
   align-items: flex-start;
@@ -446,7 +550,7 @@ body {
   word-break: break-word;
 }
 
-/* --- Adet kontrolü --- */
+/* --- Adet kontrolÃ¼ --- */
 .p-qty-row {
   display: flex;
   align-items: center;
@@ -478,7 +582,7 @@ body {
   transition: background var(--transition), transform 0.08s ease;
   user-select: none;
   flex-shrink: 0;
-  touch-action: manipulation;  /* mobilde 300ms gecikmeyi kaldırır */
+  touch-action: manipulation;  /* mobilde 300ms gecikmeyi kaldÄ±rÄ±r */
 }
 .qty-btn:hover  { background: #e8e8e8; }
 .qty-btn:active { transform: scale(0.88); }
@@ -512,7 +616,7 @@ body {
   font-weight: 600;
 }
 
-/* --- Aksiyon butonları --- */
+/* --- Aksiyon butonlarÄ± --- */
 .p-actions {
   display: flex;
   gap: 6px;
@@ -539,7 +643,7 @@ body {
 .btn-action.danger:hover { background: #FFEBEE; border-color: #e53935; }
 
 /* ============================================================
-   LİSTE GÖRÜNÜMÜ
+   LÄ°STE GÃ–RÃœNÃœMÃœ
    ============================================================ */
 .grid-list .product-brick { flex-direction: row; border-radius: var(--radius); }
 .grid-list .product-brick .studs { display: none; }
@@ -606,7 +710,7 @@ body {
   margin: 0;
 }
 
-/* Form alanları */
+/* Form alanlarÄ± */
 .brick-modal > label,
 .brick-modal .field-row label {
   display: block;
@@ -673,7 +777,7 @@ body {
 .modal-cancel:hover { background: #e4e4e4; border-color: #bbb; }
 
 /* ============================================================
-   GÖRSEL YÜKLEME
+   GÃ–RSEL YÃœKLEME
    ============================================================ */
 .brick-modal > label .image-upload-area { margin-top: 6px; }
 
@@ -780,7 +884,7 @@ body {
 #progressText { font-size: 0.76rem; color: #666; white-space: nowrap; }
 
 /* ============================================================
-   GİRİŞ / KAYIT MODALİ
+   GÄ°RÄ°Å / KAYIT MODALÄ°
    ============================================================ */
 .auth-modal { max-width: 400px; padding-bottom: 24px; }
 
@@ -832,7 +936,7 @@ body {
 .auth-toggle:hover { background: #e8e8e8; border-color: #bbb; color: var(--text); }
 
 /* ============================================================
-   STOK GEÇMİŞİ
+   STOK GEÃ‡MÄ°ÅÄ°
    ============================================================ */
 .history-list {
   padding: 14px 24px 0;
@@ -874,7 +978,7 @@ body {
 }
 
 /* ============================================================
-   LİGHTBOX
+   LÄ°GHTBOX
    ============================================================ */
 .lightbox {
   position: fixed;
@@ -951,7 +1055,7 @@ body {
 .lightbox-dot.active { background: #fff; }
 
 /* ============================================================
-   TOAST BİLDİRİMİ
+   TOAST BÄ°LDÄ°RÄ°MÄ°
    ============================================================ */
 .toast {
   position: fixed;
@@ -977,7 +1081,7 @@ body {
 }
 
 /* ============================================================
-   MOBİL UYUMU
+   MOBÄ°L UYUMU
    ============================================================ */
 @media (max-width: 680px) {
   .header { padding: 8px 12px; gap: 8px; }
@@ -1010,7 +1114,7 @@ body {
   .grid { grid-template-columns: 1fr; }
 }
 
-/* Scrollbar — ince yeşil */
+/* Scrollbar â€” ince yeÅŸil */
 ::-webkit-scrollbar       { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }

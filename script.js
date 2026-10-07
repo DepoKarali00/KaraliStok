@@ -356,24 +356,105 @@ function renderCard(p) {
   return card;
 }
 
+// Büyük sayıları kısa biçimde göster: 17093 → ₺17K, 1500000 → ₺1.5M
+function compactMoney(val) {
+  if (val >= 1000000) return '₺' + (val / 1000000).toLocaleString('tr-TR', { maximumFractionDigits: 1 }) + 'M';
+  if (val >= 10000)   return '₺' + (val / 1000).toLocaleString('tr-TR',    { maximumFractionDigits: 0 }) + 'B';
+  return '₺' + val.toLocaleString('tr-TR', { maximumFractionDigits: 0 });
+}
+
+function compactNum(val) {
+  if (val >= 1000000) return (val / 1000000).toLocaleString('tr-TR', { maximumFractionDigits: 1 }) + 'M';
+  if (val >= 10000)   return (val / 1000).toLocaleString('tr-TR',    { maximumFractionDigits: 0 }) + 'B';
+  return val.toLocaleString('tr-TR');
+}
+
 function updateStats() {
-  document.getElementById('statTotal').textContent = products.length;
-  document.getElementById('statUnits').textContent = products.reduce((s, p) => s + Number(p.qty || 0), 0);
-  document.getElementById('statLow').textContent = products.filter(p => getStatus(p) === 'low').length;
-  document.getElementById('statOut').textContent = products.filter(p => getStatus(p) === 'out').length;
-  const val = products.reduce((s, p) => s + Number(p.qty || 0) * Number(p.price || 0), 0);
-  document.getElementById('statValue').textContent = '₺' + val.toLocaleString('tr-TR', { maximumFractionDigits: 0 });
+  const total = products.length;
+  const units = products.reduce((s, p) => s + Number(p.qty || 0), 0);
+  const low   = products.filter(p => getStatus(p) === 'low').length;
+  const out   = products.filter(p => getStatus(p) === 'out').length;
+  const val   = products.reduce((s, p) => s + Number(p.qty || 0) * Number(p.price || 0), 0);
+
+  document.getElementById('statTotal').textContent = compactNum(total);
+  document.getElementById('statUnits').textContent = compactNum(units);
+  document.getElementById('statLow').textContent   = compactNum(low);
+  document.getElementById('statOut').textContent   = compactNum(out);
+  document.getElementById('statValue').textContent = compactMoney(val);
+
+  // Tooltip ile tam değeri göster (hover)
+  document.getElementById('statValue').title =
+    '₺' + val.toLocaleString('tr-TR', { maximumFractionDigits: 2 });
+  document.getElementById('statUnits').title = units.toLocaleString('tr-TR') + ' adet';
 }
 
 function updateAlertBanner() {
   const outItems = products.filter(p => getStatus(p) === 'out');
   const lowItems = products.filter(p => getStatus(p) === 'low');
-  if (!outItems.length && !lowItems.length) { alertBanner.hidden = true; return; }
-  let msg = '⚠️ ';
-  if (outItems.length) msg += `<strong>${outItems.length} ürün tükendi:</strong> ${outItems.map(p => escapeHtml(p.name)).join(', ')}. `;
-  if (lowItems.length) msg += `<strong>${lowItems.length} ürün azalıyor:</strong> ${lowItems.map(p => escapeHtml(p.name)).join(', ')}.`;
-  alertBanner.innerHTML = msg;
+
+  if (!outItems.length && !lowItems.length) {
+    alertBanner.hidden = true;
+    alertBanner.innerHTML = '';
+    return;
+  }
+
+  // Kompakt bildirim butonları — isimleri açılır panelde göster
+  let html = '<div class="alert-pills">';
+
+  if (outItems.length) {
+    const names = outItems.map(p => `<span class="alert-name-chip">${escapeHtml(p.name)}</span>`).join('');
+    html += `
+      <button class="alert-pill pill-out" data-status="out" aria-expanded="false">
+        <span class="pill-icon">🔴</span>
+        <span class="pill-count">${outItems.length}</span>
+        <span class="pill-label">Tükendi</span>
+        <span class="pill-arrow">▾</span>
+      </button>
+      <div class="alert-detail" id="alertDetailOut" hidden>${names}</div>`;
+  }
+
+  if (lowItems.length) {
+    const names = lowItems.map(p => `<span class="alert-name-chip">${escapeHtml(p.name)}</span>`).join('');
+    html += `
+      <button class="alert-pill pill-low" data-status="low" aria-expanded="false">
+        <span class="pill-icon">🟡</span>
+        <span class="pill-count">${lowItems.length}</span>
+        <span class="pill-label">Azalıyor</span>
+        <span class="pill-arrow">▾</span>
+      </button>
+      <div class="alert-detail" id="alertDetailLow" hidden>${names}</div>`;
+  }
+
+  html += '</div>';
+  alertBanner.innerHTML = html;
   alertBanner.hidden = false;
+
+  // Tıklama: açılır panel + listeyi filtrele
+  alertBanner.querySelectorAll('.alert-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const status = btn.dataset.status;
+      const detailId = status === 'out' ? 'alertDetailOut' : 'alertDetailLow';
+      const detail = document.getElementById(detailId);
+      const isOpen = !detail.hidden;
+
+      // Diğer açık panelleri kapat
+      alertBanner.querySelectorAll('.alert-detail').forEach(d => { d.hidden = true; });
+      alertBanner.querySelectorAll('.alert-pill').forEach(b => { b.setAttribute('aria-expanded', 'false'); b.classList.remove('active'); });
+
+      if (!isOpen) {
+        detail.hidden = false;
+        btn.setAttribute('aria-expanded', 'true');
+        btn.classList.add('active');
+        // Listeyi bu duruma göre filtrele
+        statusFilter.value = status;
+        render();
+      } else {
+        // Tekrar tıklanırsa filtreyi temizle
+        statusFilter.value = '';
+        render();
+      }
+    });
+  });
 }
 
 // ============================================================
