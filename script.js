@@ -210,20 +210,7 @@ async function deleteProductFromDb(id) {
   await db.collection(PRODUCTS_COL).doc(id).delete();
 }
 
-async function logHistory(productId, productName, delta, newQty) {
-  try {
-    await db.collection(PRODUCTS_COL).doc(productId)
-      .collection(HISTORY_COL).add({
-        delta,
-        newQty,
-        productName,
-        user: auth.currentUser ? auth.currentUser.email : 'bilinmiyor',
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-      });
-  } catch (e) {
-    console.warn('Geçmiş kaydedilemedi:', e);
-  }
-}
+// logHistory fonksiyonu aşağıda STOK GEÇMİŞİ bölümünde tanımlı
 
 // ============================================================
 // DURUM HESAPLAMA
@@ -603,26 +590,50 @@ const fImages = document.getElementById('fImages');
 const imageGalleryPreview = document.getElementById('imageGalleryPreview');
 let pendingImageUrls = []; // yüklenmiş URL'ler (Storage) veya base64 string'ler
 
+// Mobilde label>input[hidden] bazen çalışmıyor, tıklamayı garanti altına al
+const imageUploadArea = document.getElementById('imageUploadArea');
+if (imageUploadArea) {
+  const trigger = imageUploadArea.querySelector('.image-upload-trigger');
+  if (trigger) {
+    trigger.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      fImages.click();
+    });
+  }
+}
+
 fImages.addEventListener('change', handleImagesSelect);
 
 async function handleImagesSelect(e) {
   const files = Array.from(e.target.files);
   if (!files.length) return;
-  if (files.some(f => !f.type.startsWith('image/'))) {
-    showToast('Sadece görsel dosyaları seçebilirsin.'); return;
+
+  // Görsel olmayan dosyaları filtrele
+  const imageFiles = files.filter(f => f.type.startsWith('image/'));
+  if (!imageFiles.length) {
+    showToast('Sadece görsel dosyaları seçebilirsin.');
+    return;
   }
 
-  if (storage) {
-    await uploadToStorage(files);
-  } else {
-    // Storage yoksa ilk görseli base64 olarak sakla (eski davranış)
-    for (const file of files.slice(0, 5)) {
-      const url = await fileToBase64(file, 480, 0.72);
-      pendingImageUrls.push(url);
+  try {
+    if (storage) {
+      await uploadToStorage(imageFiles);
+    } else {
+      // Storage yoksa base64 olarak sakla (max 5 görsel)
+      showToast('Görseller işleniyor…');
+      for (const file of imageFiles.slice(0, 5)) {
+        const url = await fileToBase64(file, 480, 0.72);
+        pendingImageUrls.push(url);
+      }
+      renderImagePreviews();
+      showToast(`${imageFiles.length} görsel eklendi.`);
     }
-    renderImagePreviews();
-    showToast('Görseller hazırlandı.');
+  } catch (err) {
+    console.error('Görsel yükleme hatası:', err);
+    showToast('Görsel yüklenemedi: ' + (err.message || err.code || 'bilinmeyen hata'));
   }
+
   fImages.value = '';
 }
 
@@ -634,35 +645,58 @@ async function uploadToStorage(files) {
   let done = 0;
 
   for (const file of files) {
-    const blob     = await resizeToBlob(file, 1200, 0.85);
-    const path     = `products/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
-    const ref      = storage.ref(path);
-    const task     = ref.put(blob, { contentType: 'image/jpeg' });
+    try {
+      const blob = await resizeToBlob(file, 1200, 0.85);
+      const path = `products/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
+      const ref  = storage.ref(path);
+      const task = ref.put(blob, { contentType: 'image/jpeg' });
 
-    await new Promise((resolve, reject) => {
-      task.on('state_changed',
-        (snap) => {
-          const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
-          progressFill.style.width = pct + '%';
-          progressText.textContent = `Yükleniyor ${done + 1}/${files.length} — %${pct}`;
-        },
-        reject,
-        async () => {
-          const url = await task.snapshot.ref.getDownloadURL();
-          pendingImageUrls.push(url);
-          done++;
-          progressFill.style.width = '0%';
-          renderImagePreviews();
-          resolve();
-        }
-      );
-    });
+      await new Promise((resolve, reject) => {
+        task.on('state_changed',
+          (snap) => {
+            const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
+            progressFill.style.width = pct + '%';
+            progressText.textContent = `Yükleniyor ${done + 1}/${files.length} — %${pct}`;
+          },
+          (error) => {
+            console.error('Storage upload error:', error);
+            reject(error);
+          },
+          async () => {
+            try {
+              const url = await task.snapshot.ref.getDownloadURL();
+              pendingImageUrls.push(url);
+              done++;
+              progressFill.style.width = '0%';
+              renderImagePreviews();
+              resolve();
+            } catch (dlErr) {
+              console.error('getDownloadURL error:', dlErr);
+              reject(dlErr);
+            }
+          }
+        );
+      });
+    } catch (fileErr) {
+      console.error(`Dosya yüklenemedi (${file.name}):`, fileErr);
+      // Storage başarısız olursa base64 fallback dene
+      try {
+        const url = await fileToBase64(file, 480, 0.72);
+        pendingImageUrls.push(url);
+        done++;
+        renderImagePreviews();
+        showToast(`${file.name}: Storage hatası, base64 olarak eklendi.`);
+      } catch (b64Err) {
+        console.error('Base64 fallback da başarısız:', b64Err);
+      }
+    }
   }
 
   uploadProgress.hidden = true;
   progressText.textContent = 'Yükleniyor…';
-  showToast(`${files.length} görsel yüklendi.`);
+  if (done > 0) showToast(`${done} görsel yüklendi.`);
 }
+
 
 async function fileToBase64(file, maxSize, quality) {
   return new Promise((resolve) => {
@@ -807,6 +841,28 @@ async function handleSubmit(e) {
 // ============================================================
 // STOK GEÇMİŞİ
 // ============================================================
+let historyWriteWarned = false;
+
+async function logHistory(productId, productName, delta, newQty) {
+  try {
+    await db.collection(PRODUCTS_COL).doc(productId)
+      .collection(HISTORY_COL).add({
+        delta,
+        newQty,
+        productName,
+        user: auth.currentUser ? auth.currentUser.email : 'bilinmiyor',
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+  } catch (e) {
+    console.error('Geçmiş kaydedilemedi:', e);
+    // Kullanıcıyı sadece bir kere uyar
+    if (!historyWriteWarned) {
+      historyWriteWarned = true;
+      showToast('⚠️ Stok geçmişi kaydedilemedi. Firestore kurallarını kontrol et.');
+    }
+  }
+}
+
 async function openHistory(p) {
   const overlay = document.getElementById('historyOverlay');
   const list    = document.getElementById('historyList');
@@ -815,16 +871,27 @@ async function openHistory(p) {
   overlay.hidden = false;
 
   try {
+    // Not: orderBy kaldırıldı — Firestore composite index gerektiriyordu
+    // Bunun yerine client-side sıralama yapıyoruz
     const snap = await db.collection(PRODUCTS_COL).doc(p.id)
       .collection(HISTORY_COL)
-      .orderBy('timestamp', 'desc')
-      .limit(50)
+      .limit(100)
       .get();
 
-    if (snap.empty) { list.innerHTML = '<p class="empty-history">Henüz hareket kaydı yok.</p>'; return; }
+    if (snap.empty) {
+      list.innerHTML = '<p class="empty-history">Henüz hareket kaydı yok.<br><small>+/- butonlarıyla stok değiştirince burada görünecek.</small></p>';
+      return;
+    }
 
-    list.innerHTML = snap.docs.map(doc => {
-      const d     = doc.data();
+    // Client-side sıralama (en yenisi en üstte)
+    const docs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    docs.sort((a, b) => {
+      const ta = a.timestamp ? a.timestamp.toMillis() : 0;
+      const tb = b.timestamp ? b.timestamp.toMillis() : 0;
+      return tb - ta;
+    });
+
+    list.innerHTML = docs.slice(0, 50).map(d => {
       const sign  = d.delta > 0 ? '+' : '';
       const cls   = d.delta > 0 ? 'positive' : 'negative';
       const time  = d.timestamp ? new Date(d.timestamp.toDate()).toLocaleString('tr-TR') : '—';
@@ -837,10 +904,15 @@ async function openHistory(p) {
         </div>`;
     }).join('');
   } catch (err) {
-    console.error(err);
-    list.innerHTML = '<p class="empty-history">Geçmiş yüklenemedi.</p>';
+    console.error('Stok geçmişi hatası:', err);
+    // Eğer index hatası ise Firestore linki göster
+    const msg = (err.message || '').includes('index')
+      ? 'Firestore index gerekiyor. Tarayıcı konsolundaki linke tıkla.'
+      : 'Geçmiş yüklenemedi: ' + (err.code || err.message || 'bilinmeyen hata');
+    list.innerHTML = `<p class="empty-history">${escapeHtml(msg)}</p>`;
   }
 }
+
 
 document.getElementById('historyCloseBtn').addEventListener('click', () => {
   document.getElementById('historyOverlay').hidden = true;

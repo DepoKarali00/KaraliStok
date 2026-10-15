@@ -70,3 +70,25 @@ if (typeof firebase === 'undefined') {
 // Storage kurulmadan da site çalışır — görseller base64 olarak
 // Firestore'a kaydedilir (eski davranış, max ~5 görsel).
 // ============================================================
+
+// ============================================================
+// Firestore Security Rules — ÖNEMLİ!
+// ============================================================
+// Firebase Console → Firestore Database → Rules sekmesine gidin.
+// Aşağıdaki kuralları yapıştırın:
+//
+//    rules_version = '2';
+//    service cloud.firestore {
+//      match /databases/{database}/documents {
+//        match /products/{productId} {
+//          allow read, write: if request.auth != null;
+//          // Stok geçmişi alt koleksiyonu
+//          match /history/{historyId} {
+//            allow read, write: if request.auth != null;
+//          }
+//        }
+//      }
+//    }
+//
+// Bu kurallar olmadan stok geçmişi ve görsel kaydı çalışmaz!
+// ============================================================
