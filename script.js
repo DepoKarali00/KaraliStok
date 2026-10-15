@@ -590,18 +590,8 @@ const fImages = document.getElementById('fImages');
 const imageGalleryPreview = document.getElementById('imageGalleryPreview');
 let pendingImageUrls = []; // yüklenmiş URL'ler (Storage) veya base64 string'ler
 
-// Mobilde label>input[hidden] bazen çalışmıyor, tıklamayı garanti altına al
-const imageUploadArea = document.getElementById('imageUploadArea');
-if (imageUploadArea) {
-  const trigger = imageUploadArea.querySelector('.image-upload-trigger');
-  if (trigger) {
-    trigger.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      fImages.click();
-    });
-  }
-}
+// fImages file inputu standart <label for="fImages"> ile tetiklenir, yapay preventDefault kullanılmaz.
+
 
 fImages.addEventListener('change', handleImagesSelect);
 

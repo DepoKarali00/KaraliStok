@@ -797,7 +797,18 @@ body {
 /* ============================================================
    GÃ–RSEL YÃœKLEME
    ============================================================ */
-.brick-modal > label .image-upload-area { margin-top: 6px; }
+.form-group {
+  padding: 0 24px;
+  margin-top: 14px;
+}
+.field-heading {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
 
 .image-upload-area {
   border: 2px dashed #d0d0d0;

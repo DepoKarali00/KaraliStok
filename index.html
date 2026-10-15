@@ -144,20 +144,21 @@
     </label>
 
     <!-- Çoklu Görsel Yükleme -->
-    <label>Ürün görselleri
+    <div class="form-group">
+      <div class="field-heading">Ürün görselleri</div>
       <div class="image-upload-area" id="imageUploadArea">
         <div id="imageGalleryPreview" class="image-gallery-preview"></div>
-        <label class="image-upload-trigger">
+        <input type="file" id="fImages" accept="image/*" multiple style="position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none;">
+        <label for="fImages" class="image-upload-trigger" id="imageUploadTrigger">
           <span>📷 Görsel Ekle</span>
           <small>Birden fazla seçebilirsin</small>
-          <input type="file" id="fImages" accept="image/*" multiple hidden>
         </label>
         <div id="uploadProgress" class="upload-progress" hidden>
           <div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
           <span id="progressText">Yükleniyor…</span>
         </div>
       </div>
-    </label>
+    </div>
 
     <div class="field-row">
       <label>Ürün kodu (SKU)
