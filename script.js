@@ -635,6 +635,9 @@ async function uploadToStorage(files) {
   let done = 0;
 
   for (const file of files) {
+    let uploadedSuccessfully = false;
+
+    // 1. Firebase Storage'a yüklemeyi dene (4 saniye timeout ile)
     try {
       const blob = await resizeToBlob(file, 1200, 0.85);
       const path = `products/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
@@ -642,50 +645,65 @@ async function uploadToStorage(files) {
       const task = ref.put(blob, { contentType: 'image/jpeg' });
 
       await new Promise((resolve, reject) => {
+        // 4 saniye içinde ilerleme olmazsa timeout ver
+        const timer = setTimeout(() => {
+          try { task.cancel(); } catch (e) {}
+          reject(new Error('Storage bağlantısı zaman aşımına uğradı'));
+        }, 4500);
+
         task.on('state_changed',
           (snap) => {
-            const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
+            const pct = Math.round((snap.bytesTransferred / (snap.totalBytes || 1)) * 100);
             progressFill.style.width = pct + '%';
             progressText.textContent = `Yükleniyor ${done + 1}/${files.length} — %${pct}`;
           },
           (error) => {
-            console.error('Storage upload error:', error);
+            clearTimeout(timer);
+            console.warn('Storage yükleme hatası:', error.code || error.message);
             reject(error);
           },
           async () => {
+            clearTimeout(timer);
             try {
               const url = await task.snapshot.ref.getDownloadURL();
               pendingImageUrls.push(url);
               done++;
+              uploadedSuccessfully = true;
               progressFill.style.width = '0%';
               renderImagePreviews();
               resolve();
             } catch (dlErr) {
-              console.error('getDownloadURL error:', dlErr);
               reject(dlErr);
             }
           }
         );
       });
-    } catch (fileErr) {
-      console.error(`Dosya yüklenemedi (${file.name}):`, fileErr);
-      // Storage başarısız olursa base64 fallback dene
+    } catch (err) {
+      console.warn('Storage kullanılamadı, base64 fallback devreye giriyor:', err.message);
+    }
+
+    // 2. Storage yanıt vermediyse veya hata aldıysa: Doğrudan base64 olarak ekle
+    if (!uploadedSuccessfully) {
       try {
-        const url = await fileToBase64(file, 480, 0.72);
+        progressText.textContent = `Görsel optimize ediliyor (${file.name})…`;
+        const url = await fileToBase64(file, 800, 0.78);
         pendingImageUrls.push(url);
         done++;
         renderImagePreviews();
-        showToast(`${file.name}: Storage hatası, base64 olarak eklendi.`);
       } catch (b64Err) {
-        console.error('Base64 fallback da başarısız:', b64Err);
+        console.error('Base64 dönüştürme hatası:', b64Err);
+        showToast(`${file.name} eklenemedi.`);
       }
     }
   }
 
   uploadProgress.hidden = true;
   progressText.textContent = 'Yükleniyor…';
-  if (done > 0) showToast(`${done} görsel yüklendi.`);
+  if (done > 0) {
+    showToast(`${done} görsel başarıyla eklendi.`);
+  }
 }
+
 
 
 async function fileToBase64(file, maxSize, quality) {
